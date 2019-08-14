@@ -5,7 +5,14 @@ Painel do SEI desenvolvido em powerbi, em parceria com o Ministério da Infraest
 
 ## Painel
 
+### Visão Geral
+![enter image description here](https://github.com/chris-redfield/painel-sei-powerbi/blob/master/img/geral.png?raw=true)
 
+### Tipos de processo
+![enter image description here](https://github.com/chris-redfield/painel-sei-powerbi/blob/master/img/tipos-processos.png?raw=true)
+
+### Externos
+![enter image description here](https://github.com/chris-redfield/painel-sei-powerbi/blob/master/img/externos.png?raw=true)
 
 ## Instalação
 
