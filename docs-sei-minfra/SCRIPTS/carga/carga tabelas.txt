@@ -1,0 +1,260 @@
+﻿
+
+
+
+begin
+delete from BD_POWER_BI.TB_SEI_ESTATISTICAS
+delete from BD_POWER_BI.PROCESSOS_CRIADOS;
+delete from BD_POWER_BI.PROCESSOS_ENVIADOS;
+delete from BD_POWER_BI.PROCESSOS_RECEBIDOS;
+delete from BD_POWER_BI.DOCUMENTOS_CRIADOS;
+delete from BD_POWER_BI.DOCUMENTOS_ASSINADOS;
+delete from BD_POWER_BI.TEMPO_MEDIO;
+delete from BD_POWER_BI.PETICIONAMENTOS;
+delete from BD_POWER_BI.PETICIONAMENTOS_TRAMITADOS;
+delete from BD_POWER_BI.PROCESSOS_RECEBIDOS_BARRAMENTO;
+delete from BD_POWER_BI.PROCESSOS_ENVIADOS_BARRAMENTO;
+delete from BD_POWER_BI.ASSINATURAS_EXTERNAS;
+delete from BD_POWER_BI.ACESSO_EXTERNO_PROCESSO;
+delete from BD_POWER_BI.MAPA_PETICOES;
+delete from BD_POWER_BI.USUARIOS_ATIVOS;
+delete from BD_POWER_BI.PALAVRAS_PETICIONAMENTO;
+delete from BD_POWER_BI.ESTATISTICA_TIPO_PROCESSO;
+delete from BD_POWER_BI.UNIDADES;
+
+COMMIT;
+END;
+
+begin
+
+
+insert into BD_POWER_BI.TB_SEI_ESTATISTICAS(unidade, atividade, data, total)
+select u.sigla unidade, 
+case t.nome
+when 'Processo recebido na unidade' then 'PROCESSOS RECEBIDOS'
+when 'Assinado Documento @DOCUMENTO@ por @USUARIO@' then 'DOCUMENTOS ASSINADOS'
+when 'Processo remetido pela unidade @UNIDADE@' then 'PROCESSOS ENVIADOS'
+when 'Gerado documento @NIVEL_ACESSO@@GRAU_SIGILO@ @DOCUMENTO@@HIPOTESE_LEGAL@' then 'DOCUMENTOS CRIADOS'
+when 'Processo @NIVEL_ACESSO@@GRAU_SIGILO@ gerado@DATA_AUTUACAO@@HIPOTESE_LEGAL@' then 'PROCESSOS CRIADOS'
+END ATIVIDADE,
+trunc(a.DTH_ABERTURA, 'DD') data, count(DISTINCT a.ID_PROTOCOLO) total
+from bd_sei_ref_v2.atividade a 
+join bd_sei_ref_v2.unidade u on u.id_unidade = a.ID_UNIDADE_ORIGEM
+join bd_sei_ref_v2.tarefa t on t.id_tarefa = a.id_tarefa
+where a.id_tarefa in (32,48,1,5,2) 
+group by u.sigla, trunc(a.DTH_ABERTURA, 'DD'), t.NOME
+order by u.sigla, trunc(a.DTH_ABERTURA, 'DD') asc;
+commit;
+
+
+insert into BD_POWER_BI.PROCESSOS_CRIADOS(unidade, data, total)
+select unidade, data, total from BD_POWER_BI.TB_SEI_ESTATISTICAS
+where atividade = 'PROCESSOS CRIADOS';
+commit;
+
+insert into BD_POWER_BI.PROCESSOS_ENVIADOS(unidade, data, total)
+select unidade, data, total from BD_POWER_BI.TB_SEI_ESTATISTICAS
+where atividade = 'PROCESSOS ENVIADOS';
+commit;
+
+insert into BD_POWER_BI.PROCESSOS_RECEBIDOS(unidade, data, total)
+select unidade, data, total from BD_POWER_BI.TB_SEI_ESTATISTICAS
+where atividade = 'PROCESSOS RECEBIDOS';
+commit;
+
+insert into BD_POWER_BI.DOCUMENTOS_CRIADOS(unidade, data, total)
+select unidade, data, total from BD_POWER_BI.TB_SEI_ESTATISTICAS
+where atividade = 'DOCUMENTOS CRIADOS';
+commit;
+
+insert into BD_POWER_BI.DOCUMENTOS_ASSINADOS(unidade, data, total)
+select unidade, data, total from BD_POWER_BI.TB_SEI_ESTATISTICAS
+where atividade = 'DOCUMENTOS ASSINADOS';
+commit;
+
+insert into BD_POWER_BI.TEMPO_MEDIO(unidade, total)
+select sigla, avg(tempo) tempo
+from
+(
+    select sigla, processo, sum(tempo) tempo
+    from
+    (
+        select u.sigla, p.protocolo_formatado processo,     
+        (nvl(a.DTH_CONCLUSAO, sysdate)-a.DTH_abertura) tempo
+        from bd_sei_ref_v2.atividade a
+        join bd_sei_ref_v2.unidade u on u.id_unidade = a.id_unidade
+        join bd_sei_ref_v2.protocolo p on p.id_protocolo = a.id_protocolo
+    ) aux group by sigla, processo
+) group by sigla;
+commit;
+
+
+insert into BD_POWER_BI.PETICIONAMENTOS(data, total)
+select trunc(a.DTH_ABERTURA, 'DD') data, count(*) total
+from BD_SEI_REF_V2.PROTOCOLO P
+JOIN BD_SEI_REF_V2.PROCEDIMENTO PP ON PP.ID_PROCEDIMENTO = P.ID_PROTOCOLO
+join BD_SEI_REF_V2.atividade a on a.id_protocolo = pp.id_procedimento
+WHERE PP.ID_TIPO_PROCEDIMENTO = '100000673' and a.id_tarefa = 1
+group by trunc(a.DTH_ABERTURA, 'DD') order by 1;
+commit;
+
+
+insert into BD_POWER_BI.PETICIONAMENTOS_TRAMITADOS(unidade, data, total)
+select u.sigla unidade, trunc(a.DTH_ABERTURA, 'DD') data, count(distinct a.id_protocolo) total
+from BD_SEI_REF_V2.PROTOCOLO P
+JOIN BD_SEI_REF_V2.PROCEDIMENTO PP ON PP.ID_PROCEDIMENTO = P.ID_PROTOCOLO
+join BD_SEI_REF_V2.atividade a on a.id_protocolo = pp.id_procedimento
+join BD_SEI_REF_V2.unidade u on u.id_unidade = a.id_unidade
+WHERE PP.ID_TIPO_PROCEDIMENTO = '100000673' and a.id_tarefa = 32
+group by u.sigla, trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+
+insert into BD_POWER_BI.PROCESSOS_RECEBIDOS_BARRAMENTO(data, total)
+select trunc(a.DTH_ABERTURA, 'DD') data, count(distinct a.id_protocolo) total
+from bd_sei_ref_v2.atividade a 
+where a.id_tarefa = '1012'
+group by trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+insert into BD_POWER_BI.PROCESSOS_ENVIADOS_BARRAMENTO(data, total)
+select trunc(a.DTH_ABERTURA, 'DD') data, count(distinct a.id_protocolo) total
+from bd_sei_ref_v2.atividade a 
+where a.id_tarefa = '1015'
+group by trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+insert into BD_POWER_BI.ASSINATURAS_EXTERNAS(unidade, data, total)
+select u.sigla unidade, trunc(a.DTH_ABERTURA, 'DD') data, count(distinct a.id_protocolo) total
+from bd_sei_ref_v2.atividade a 
+join bd_sei_ref_v2.unidade u on u.id_unidade = a.id_unidade
+where a.id_tarefa = '86'
+group by u.sigla, trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+insert into BD_POWER_BI.ACESSO_EXTERNO_PROCESSO(unidade, data, total)
+select u.sigla unidade, trunc(a.DTH_ABERTURA, 'DD') data, count(distinct a.id_protocolo) total
+from bd_sei_ref_v2.atividade a 
+join bd_sei_ref_v2.unidade u on u.id_unidade = a.id_unidade
+where a.id_tarefa = '50'
+group by u.sigla, trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+insert into BD_POWER_BI.MAPA_PETICOES(uf, data, total)
+select  
+translate(uf.nome,'ÁÇÉÍÓÚÀÈÌÒÙÂÊÎÔÛÃÕËÜáçéíóúàèìòùâêîôûãõëü','ACEIOUAEIOUAEIOUAOEUaceiouaeiouaeiouaoeu') uf, 
+trunc(a.DTH_ABERTURA, 'DD') data,
+count(*) total
+from BD_SEI_REF_V2.PROCEDIMENTO PP
+join BD_SEI_REF_V2.atividade a on a.id_protocolo = pp.id_procedimento
+join BD_SEI_REF_V2.usuario u on u.id_usuario = a.ID_USUARIO_ORIGEM
+join BD_SEI_REF_V2.contato c on c.ID_CONTATO = u.ID_CONTATO
+join BD_SEI_REF_V2.UF uf on uf.id_uf = c.ID_UF
+WHERE PP.ID_TIPO_PROCEDIMENTO = '100000673' and a.id_tarefa = 1
+group by uf.nome, 
+trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+insert into BD_POWER_BI.USUARIOS_ATIVOS(unidade,usuario, data, total)
+select u.sigla unidade, 
+us.sigla usuario,
+trunc(a.DTH_ABERTURA, 'DD') data,
+count(distinct a.id_usuario_origem) total
+from bd_sei_ref_v2.atividade a
+join bd_sei_ref_v2.unidade u on u.id_unidade = a.id_unidade_origem
+join bd_sei_ref_v2.usuario us on us.id_usuario = a.id_usuario_origem
+where us.sta_tipo = '0'
+group by u.sigla, us.sigla, trunc(a.DTH_ABERTURA, 'DD');
+commit;
+
+
+insert into BD_POWER_BI.PALAVRAS_PETICIONAMENTO(descricao)
+select p.DESCRICAO
+from BD_SEI_REF_V2.protocolo p
+join BD_SEI_REF_V2.procedimento pp on pp.id_procedimento = p.id_protocolo
+join BD_SEI_REF_V2.atividade a on a.id_protocolo = pp.id_procedimento
+join BD_SEI_REF_V2.usuario u on u.id_usuario = a.ID_USUARIO_ORIGEM
+join BD_SEI_REF_V2.contato c on c.ID_CONTATO = u.ID_CONTATO
+join BD_SEI_REF_V2.UF uf on uf.id_uf = c.ID_UF
+WHERE PP.ID_TIPO_PROCEDIMENTO = '100000673' and a.id_tarefa = 1;
+commit;
+
+insert into BD_POWER_BI.DATA_ATUALIZACAO
+select max(dth_abertura) from BD_SEI_REF_v2.atividade;
+commit;
+
+insert into BD_POWER_BI.ESTATISTICA_TIPO_PROCESSO (tipo_processo, nivel_acesso, total)
+select 
+tipo.nome tipo_processo,
+case p.STA_NIVEL_ACESSO_GLOBAL
+when '0' then 'PUBLICO'
+when '1' then 'RESTRITO'
+when '2' then 'SIGILOSO'
+END nivel_acesso,
+count(distinct p.id_protocolo) total
+from
+bd_sei_ref_v2.protocolo p
+join bd_sei_ref_v2.procedimento pp on pp.id_procedimento = p.ID_PROTOCOLO
+join bd_sei_ref_v2.tipo_procedimento tipo on tipo.ID_TIPO_PROCEDIMENTO = pp.ID_TIPO_PROCEDIMENTO
+group by tipo.nome, p.STA_NIVEL_ACESSO_GLOBAL;
+commit;
+
+
+select unidade, tipo_processo, nivel_acesso, avg(tempo) tempo
+from (
+    select unidade, tipo_processo, processo, nivel_acesso, sum(tempo) tempo 
+    from (  
+            select 
+            u.sigla unidade,
+            tipo.nome tipo_processo,
+            p.id_protocolo processo,
+            case p.STA_NIVEL_ACESSO_GLOBAL
+            when '0' then 'PUBLICO'
+            when '1' then 'RESTRITO'
+            when '2' then 'SIGILOSO'
+            END nivel_acesso,
+            (nvl(a.DTH_CONCLUSAO, sysdate)-a.DTH_abertura) tempo
+            from bd_sei_ref_v2.atividade a
+            join bd_sei_ref_v2.protocolo p on p.id_protocolo = a.id_protocolo
+            join bd_sei_ref_v2.procedimento pp on pp.id_procedimento = p.id_protocolo
+            join bd_sei_ref_v2.tipo_procedimento tipo on tipo.id_tipo_procedimento = pp.id_tipo_procedimento
+            join bd_sei_ref_v2.unidade u on u.id_unidade = a.id_unidade 
+            where a.id_unidade = '110000299' and a.id_protocolo = '35411'
+    ) tb1
+    group by processo, unidade, tipo_processo, nivel_acesso
+) tb2 where tb2.tempo > 1
+group by unidade, tipo_processo, nivel_acesso;
+
+
+
+insert into BD_POWER_BI.unidades(sigla, raiz)
+select upper(u.sigla),
+connect_by_root(upper(u.descricao)) raiz
+from bd_sip_ref_v2.rel_hierarquia_unidade h
+-- primeiro pegando as unidade que estão ativas e na hierarquia
+join bd_sei_ref_v2.unidade u on h.id_unidade = u.id_unidade
+where exists 
+(
+    select id_unidade from bd_Sei_ref_v2.atividade 
+    where id_unidade = u.id_unidade and id_tarefa in (32,48,1,5,2)
+)
+and u.sin_ativo = 'S'
+START WITH h.id_unidade_pai is null  
+CONNECT BY NOCYCLE PRIOR h.id_unidade = h.id_unidade_pai;
+
+--depois unidades sem hierarquia ou desativadas
+insert into BD_POWER_BI.unidades(sigla, raiz)
+select upper(u.sigla),
+'DESATIVADAS' raiz
+from bd_sei_ref_v2.unidade u 
+where exists 
+(
+    select id_unidade from bd_Sei_ref_v2.atividade 
+    where id_unidade = u.id_unidade and id_tarefa in (32,48,1,5,2)
+)
+and u.id_unidade not in (select id_unidade from bd_sip_ref_v2.rel_hierarquia_unidade);
+commit;
+
+END;
+
+

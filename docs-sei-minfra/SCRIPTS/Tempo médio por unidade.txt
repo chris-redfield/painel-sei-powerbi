@@ -1,0 +1,13 @@
+select sigla, avg(tempo) tempo
+from
+(
+    select sigla, processo, sum(tempo) tempo
+    from
+    (
+        select u.sigla, p.protocolo_formatado processo,     
+        (nvl(a.DTH_CONCLUSAO, sysdate)-a.DTH_abertura) tempo
+        from atividade a
+        join unidade u on u.id_unidade = a.id_unidade
+        join protocolo p on p.id_protocolo = a.id_protocolo
+    ) aux group by sigla, processo
+) group by sigla;
