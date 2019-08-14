@@ -1,7 +1,9 @@
 
 # painel-sei-powerbi
 
-Painel do SEI desenvolvido em powerbi, em parceria com o Ministério da Infraestrutura
+Painel do SEI desenvolvido em powerbi, em parceria com o Ministério da Infraestrutura.
+
+O Ministério da Infraestrutura desenvolveu, e depois compartilhou com o Ministério da Economia. Somos muito gratos!
 
 ## Painel
 
@@ -17,6 +19,8 @@ Painel do SEI desenvolvido em powerbi, em parceria com o Ministério da Infraest
 ## Instalação
 
 1. Executar o script ddl-tabelas.sql para criação das tabelas usadas pelo painel
+
 2. Executar o script carga.sql, tendo acesso à base do SEI, para carga das tabelas
+
 
 > Written with [StackEdit](https://stackedit.io/).
